@@ -1,3 +1,15 @@
+// Javadoc2Wiki - original author: Michael Sprague
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+    
 package javadoc2wiki;
 
 import java.io.BufferedWriter;
@@ -23,6 +35,7 @@ public class WikiDoclet {
 
         for (ClassDoc cls : root.classes()) {
         	if (!cls.isOrdinaryClass()) continue;
+        	if (!cls.isPublic()) continue;
         	BufferedWriter out = null;
         	try  
         	{
@@ -108,7 +121,7 @@ public class WikiDoclet {
     	} else if (type.qualifiedTypeName().matches("^java.*")) {
        		s+=type.typeName()+type.dimension();
     	} else {
-    		s+="[["+type.typeName()+"]]"+type.dimension();
+    		s+="[["+makeWikiName(type.typeName())+"]["+type.typeName()+"]]"+type.dimension();
     	}
     	return s;
     }
@@ -161,7 +174,7 @@ public class WikiDoclet {
 	    	return file;
     	}
 		static void add(ClassDoc cls, String title, int level) {
-			add(cls,title,level,cls.name()+"#" + title.replace(" ", "_"));
+			add(cls,title,level,makeWikiName(cls.name())+"#" + title.replace(" ", "_"));
 		}
 		static void add(ClassDoc cls, String title, int level, String link) {
 			String line = "   "; //accommodate root package name
