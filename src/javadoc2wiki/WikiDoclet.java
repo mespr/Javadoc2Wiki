@@ -28,6 +28,8 @@ import com.sun.javadoc.Parameter;
 import com.sun.javadoc.RootDoc;
 import com.sun.javadoc.Tag;
 import com.sun.javadoc.Type;
+import com.sun.javadoc.ConstructorDoc;
+import com.sun.javadoc.ExecutableMemberDoc;
 
 public class WikiDoclet {
 	static String packageName;
@@ -50,12 +52,15 @@ public class WikiDoclet {
         	    out.write("%INCLUDE{WebPageHeader}%\n");
         	    TocWriter.add(cls,cls.name(),0,makeWikiName(cls.name()));
         	    out.write(cls.commentText()+"\n");
-       	    
+
+        	    if (cls.enumConstants().length > 0) {
+            	    out.write("\n---++ Enum Constants\n");
+        	    }
         	    TocWriter.add(cls,"Summary of Fields",1);
         	    out.write("\n---++ Summary of Fields\n");
         	    out.write("|*Modifier and Type*|*Field*|\n");
         	    for (FieldDoc field : cls.fields()) {
-        	    	out.write("| ="+field.modifiers()+" "+buildTypeName(field.type())+"= |"+field.name()+" ");
+        	    	out.write("| ="+field.modifiers()+" "+buildTypeName(field.type())+"= |="+field.name()+"= ");
         	    	if (!field.commentText().isEmpty()) {
         	    		out.write("<br>"+getFirstLine(field));
         	    	}
@@ -63,7 +68,7 @@ public class WikiDoclet {
         	    }
 
         	    TocWriter.add(cls,"Summary of Methods",1);
-        	    out.write("\n---++ Summary Methods\n");
+        	    out.write("\n---++ Summary of Methods\n");
         	    out.write("|*Modifier and Type*|*Method*|\n");
         	    for (MethodDoc method : cls.methods()) {
         	    	out.write("| ="+method.modifiers()+" "+buildTypeName(method.returnType())+"= | ="+buildMethodStatement(method)+"= ");
@@ -73,28 +78,55 @@ public class WikiDoclet {
         	    	out.write("|\n");
         	    }
 
+        	    if (cls.innerClasses().length > 0) {
+        	    	TocWriter.add(cls,"Inner Classes",1);
+            	    out.write("\n---++ Inner Classes");
+            	    for (ClassDoc icls : cls.innerClasses()) {
+            	    	out.write("\n   * [["+makeWikiName(icls.name())+"]["+icls.name()+"]] - "+getFirstLine(icls));
+            	    }
+        	    }
+        	    
+        	    if (cls.constructors().length > 0) {
+        	    	TocWriter.add(cls,"Constructors",1);
+            	    out.write("\n---++ Constructors");
+            	    for (ConstructorDoc constructor : cls.constructors()) {
+            	    	out.write("\n=="+buildMethodStatement(constructor)+"==\n");
+            	    	if (!constructor.commentText().isEmpty()) {
+                	    	out.write("\n"+ constructor.commentText()+"\n");
+            	    	}
+            	    	if (constructor.paramTags().length > 0) {
+    	        	    	out.write("|*Parameter*|*Description*|\n");
+    	        	    	for (ParamTag param : constructor.paramTags()) {
+    	        	    		out.write("|"+param.parameterName()+"|"+param.parameterComment().replace(System.getProperty("line.separator"),"")+"|\n");
+    	        	    	}
+            	    	}
+            	    }
+        	    }
+        	    
         	    TocWriter.add(cls,"Method Details",1);
         	    out.write("\n---++ Method Details\n");
         	    for (MethodDoc method : cls.methods()) {
-            	    TocWriter.add(cls,method.name(),2);
-        	    	out.write("\n\n---+++ "+method.name()+"\n");
-        	    	out.write("=="+method.modifiers()+" "+buildTypeName(method.returnType())+" "+buildMethodStatement(method)+"==\n\n");
-        	    	out.write(method.commentText()+"\n\n");
+            	    TocWriter.add(cls,method.name()+"()",2);
+        	    	out.write("\n---+++ "+method.name()+"()\n");
+        	    	out.write("=="+method.modifiers()+" "+buildTypeName(method.returnType())+" "+buildMethodStatement(method)+"==\n");
+        	    	if (!method.commentText().isEmpty()) {
+            	    	out.write("\n"+method.commentText()+"\n");
+        	    	}
         	    	if (method.paramTags().length > 0) {
-	        	    	out.write("|*Parameter*|*Description*|\n");
+	        	    	out.write("\n|*Parameter*|*Description*|\n");
 	        	    	for (ParamTag param : method.paramTags()) {
-	        	    		out.write("|"+param.parameterName()+"|"+param.parameterComment()+"|\n");
+	        	    		out.write("|"+param.parameterName()+"|"+param.parameterComment().replace(System.getProperty("line.separator"),"")+"|\n");
 	        	    	}
-	        	    	for (Tag tag : method.tags("return")) {
-	        	    		String title = tag.name();
-	        	    		if (title.equals("@return")) {
-		        	    		out.write("\n---++++ Return Value");
-		        	    		out.write("\n"+tag.text());
-	        	    		} else {
-	        	    			out.write("\n---++++ "+tag.kind());
-	        	    			out.write("\n"+tag.text());
-	        	    		}
-	        	    	}
+        	    	}
+        	    	for (Tag tag : method.tags("return")) {
+        	    		String title = tag.name();
+        	    		if (title.equals("@return")) {
+	        	    		out.write("\n---++++ Return Value");
+	        	    		out.write("\n"+tag.text());
+        	    		} else {
+        	    			out.write("\n---++++ "+tag.kind());
+        	    			out.write("\n"+tag.text());
+        	    		}
         	    	}
         	    }
         	    out.write("%META:FORM{name=\"WebForm\"}%\n");
@@ -126,7 +158,7 @@ public class WikiDoclet {
     	return s;
     }
     
-    private static String buildMethodStatement(MethodDoc method) {
+    private static String buildMethodStatement(ExecutableMemberDoc method) {
     	String s = "";
     	s += method.name()+"(";
     	String params = "";
@@ -174,7 +206,7 @@ public class WikiDoclet {
 	    	return file;
     	}
 		static void add(ClassDoc cls, String title, int level) {
-			add(cls,title,level,makeWikiName(cls.name())+"#" + title.replace(" ", "_"));
+			add(cls,title,level,makeWikiName(cls.name())+"#" + title.replace(" ", "_").replace("()",""));
 		}
 		static void add(ClassDoc cls, String title, int level, String link) {
 			String line = "   "; //accommodate root package name
